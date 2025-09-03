@@ -43,7 +43,6 @@ public class BookingService {
      * Creates a booking for a service requested by a user.
      *
      * @param userDetails    the ID of the user requesting the booking
-     * @param serviceId the ID of the service to be booked
      * @return the created Booking object
      * @throws RuntimeException if the user is not found, or if the service is not found,
      *                          or if the user tries to book their own service
