@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 
@@ -36,10 +35,37 @@ public class UserController {
     private RatingRepository ratingRepository;
 
     @GetMapping("/{id}")  // get by id
-    public ResponseEntity<User> getUserById(@PathVariable Long id){
-        Optional<User> user = userService.getUserById(id);
-        if (user.isPresent()){
-            return new ResponseEntity<>(user.get(), HttpStatus.OK);
+    public ResponseEntity<ProfileResponseDTO> getUserById(@PathVariable Long id){
+        Optional<User> userOpt = userService.getUserById(id);
+        if (userOpt.isPresent()){
+            User user = userOpt.get();
+            String[] skillsArray = user.getSkills() != null ? user.getSkills().split(",") : new String[0];
+            int skillCount = skillsArray.length;
+            int  serviceCount = serviceRepository.countByPostedBy_Id(user.getId());
+            int reviewCount = ratingRepository.countByReviewee_Id(user.getId());
+            Double averageRatingDouble = ratingRepository.findAverageRatingByUserId(user.getId());
+            double averageRating;
+            if (averageRatingDouble != null) {
+                averageRating = averageRatingDouble;
+            } else {
+                averageRating = 0.0; // Default value if no ratings exist
+            }
+            List<Service> services = serviceRepository.findAllByPostedBy_Id(user.getId());
+            ProfileResponseDTO profile = new ProfileResponseDTO();
+            profile.setDisplayUsername(user.getDisplayUsername());
+            profile.setName(user.getName());
+            profile.setEmail(user.getEmail());
+            profile.setBio(user.getBio());
+            profile.setLocation(user.getLocation());
+            profile.setSkills(user.getSkills());
+            profile.setProfileImageUrl(user.getProfileImageUrl());
+            profile.setCreatedAt(user.getCreatedAt());
+            profile.setSkillCount(skillCount);
+            profile.setServiceCount(serviceCount);
+            profile.setReviewCount(reviewCount);
+            profile.setAverageRating(averageRating);
+            profile.setServices(services);
+            return new ResponseEntity<>(profile, HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -98,7 +124,7 @@ public class UserController {
     }
 
     @PutMapping("/profile/update")
-    public ResponseEntity<?> userProfileUpdate(@RequestBody UpdateProfileDTO profileDTO, @AuthenticationPrincipal UserDetails userDetails){
+    public ResponseEntity<User> userProfileUpdate(@RequestBody UpdateProfileDTO profileDTO, @AuthenticationPrincipal UserDetails userDetails){
         String email = userDetails.getUsername();
         User user = userService.getUserByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
@@ -107,7 +133,7 @@ public class UserController {
             return new ResponseEntity<>(updatedUser, HttpStatus.OK);
         }
         catch (RuntimeException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
@@ -118,16 +144,19 @@ public class UserController {
 //    Update User.profileImageUrl with image path
 
     @PostMapping("/profile/upload-image")
-    public ResponseEntity<?> uploadProfileImage(
+    public ResponseEntity<ProfileImageUploadResponseDTO> uploadProfileImage(
             @RequestParam("image") MultipartFile image,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        String email = userDetails.getUsername();
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+            String email = userDetails.getUsername();
         try {
-            String imageUrl = userService.uploadProfileImage(email, image);
-            return ResponseEntity.ok().body(Map.of("profileImageUrl", imageUrl));
+            String profileImageUrl = userService.uploadProfileImage(email, image);
+            return ResponseEntity.ok(new ProfileImageUploadResponseDTO(profileImageUrl));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

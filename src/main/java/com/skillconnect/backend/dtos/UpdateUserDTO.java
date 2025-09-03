@@ -10,10 +10,10 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateUserDTO {
+    private Long id;
     private String name;
     private String username;
     private String bio;
-    private String email;
     private String location;
     private String skills; // comma-separated list of skills
     private String profileImageUrl;

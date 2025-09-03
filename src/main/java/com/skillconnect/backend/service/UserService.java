@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +24,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -42,11 +46,10 @@ public class UserService {
     }
 
     public User updateUser(UpdateUserDTO dto) {
-        User existingUser = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + dto.getEmail()));
+        User existingUser = userRepository.findById(dto.getId())
+                .orElseThrow(() -> new RuntimeException("User not found" ));
             existingUser.setName(dto.getName());
             existingUser.setUsername(dto.getUsername());
-            existingUser.setEmail(dto.getEmail());
             existingUser.setBio(dto.getBio());
             existingUser.setSkills(dto.getSkills());
             existingUser.setLocation(dto.getLocation());
@@ -89,36 +92,21 @@ public class UserService {
 
     public String uploadProfileImage(String email, MultipartFile imageFile) throws IOException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         String contentType = imageFile.getContentType();
-        if (contentType == null ||
-                !(contentType.equals("image/jpeg") || contentType.equals("image/png"))) {
-            throw new IllegalArgumentException("Only JPEG and PNG images are allowed.");
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only image files are allowed.");
         }
 
-        String folderPath = "uploads/profile/";
-        String fileName = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-        Path filePath = Paths.get(folderPath + fileName);
-        
-        // Ensure the directory exists
-        Path directoryPath = Paths.get(folderPath);
-        if (!Files.exists(directoryPath)) {
-            Files.createDirectories(directoryPath);
-        }
+        String fileUrl = cloudinaryService.uploadFile(imageFile);
 
-        // Save file
-        Files.copy(imageFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-        // Save file URL to user
-        String fileUrl = "/uploads/profile/" + fileName; // for now this is relative URL
         user.setProfileImageUrl(fileUrl);
         userRepository.save(user);
 
         return fileUrl;
     }
 
-    // Change Password Method
 
     public void changePassword(String email, ChangePasswordDTO dto){
         User user = userRepository.findByEmail(email)
@@ -143,6 +131,13 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
+
+    public void clearFcmToken(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setFcmToken(null); // clear token
         userRepository.save(user);
     }
 }

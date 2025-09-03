@@ -1,11 +1,13 @@
 package com.skillconnect.backend.controller;
 
 import com.skillconnect.backend.dtos.BookingRequestDTO;
+import com.skillconnect.backend.dtos.BookingResponseDTO;
 import com.skillconnect.backend.dtos.BookingStatusUpdateRequestDTO;
 import com.skillconnect.backend.models.Booking;
 import com.skillconnect.backend.models.Service;
 import com.skillconnect.backend.models.User;
 import com.skillconnect.backend.service.BookingService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -38,10 +40,10 @@ public class BookingController {
 
     // Get all bookings for a requested by user
     @GetMapping("/requested-by/{userId}")
-    public ResponseEntity<Page<Booking>> getBookingsByRequester(@PathVariable Long userId,
+    public ResponseEntity<Page<BookingResponseDTO>> getBookingsByRequester(@PathVariable Long userId,
                                                                 @RequestParam(defaultValue = "0") int page,
                                                                 @RequestParam(defaultValue = "10") int size) {
-        Page<Booking> bookings = bookingService.getBookingsRequestedByUser(userId, PageRequest.of(page, size));
+        Page<BookingResponseDTO> bookings = bookingService.getBookingsRequestedByUser(userId, PageRequest.of(page, size));
         if (bookings.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -49,10 +51,10 @@ public class BookingController {
     }
 
     @GetMapping("/service-provider/{providerId}")
-    public ResponseEntity<Page<Booking>> getBookingsByServiceProviderId( @PathVariable Long providerId,
-                                                                         @RequestParam(defaultValue = "0") int page,
-                                                                         @RequestParam(defaultValue = "10") int size) {
-        Page<Booking> bookings = bookingService.getBookingsForServiceProvider(providerId, PageRequest.of(page, size));
+    public ResponseEntity<Page<BookingResponseDTO>> getBookingsByServiceProviderId(@PathVariable Long providerId,
+                                                                                   @RequestParam(defaultValue = "0") int page,
+                                                                                   @RequestParam(defaultValue = "10") int size) {
+        Page<BookingResponseDTO> bookings = bookingService.getBookingsForServiceProvider(providerId, PageRequest.of(page, size));
         return new ResponseEntity<>(bookings, HttpStatus.OK);
     }
 
@@ -78,7 +80,7 @@ public class BookingController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Booking> updateBookingStatus(
+    public ResponseEntity<?> updateBookingStatus(
             @PathVariable Long id,
             @RequestBody @Valid BookingStatusUpdateRequestDTO bookingStatusRequest)
     {
@@ -89,9 +91,12 @@ public class BookingController {
 
         try {
             Booking updatedBooking = bookingService.updateBookingStatus(id, bookingStatusRequest.getStatus());
-            return new ResponseEntity<>(updatedBooking, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return ResponseEntity.ok(updatedBooking);
+
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Booking not found");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 

@@ -6,6 +6,7 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
 import com.skillconnect.backend.dtos.BookingRequestDTO;
+import com.skillconnect.backend.dtos.BookingResponseDTO;
 import com.skillconnect.backend.dtos.FirestoreMessage;
 import com.skillconnect.backend.models.Booking;
 import com.skillconnect.backend.models.BookingStatus;
@@ -136,6 +137,7 @@ public class BookingService {
     public Booking updateBookingStatus(Long bookingId, BookingStatus status) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
+        String userFcmToken = booking.getRequestedBy().getFcmToken();
 
         if (booking.getStatus() == status) {
             throw new RuntimeException("Booking is already " + status);
@@ -146,30 +148,36 @@ public class BookingService {
         booking.setStatus(status);
         booking.setUpdatedAt(LocalDateTime.now());
 
+
         if (status == BookingStatus.CANCELLED) {
             booking.setCancelledAt(LocalDateTime.now());
+            if(userFcmToken == null && userFcmToken.isEmpty()) {
+                firebaseNotificationService.sendNotification(userFcmToken, "SkillConnect",
+                        "Your booking for " + booking.getService().getTitle() + " has been cancelled 😔.");
+            }
         } else if (status == BookingStatus.CONFIRMED) {
             booking.setConfirmedAt(LocalDateTime.now());
+            if(userFcmToken == null && userFcmToken.isEmpty()) {
+                firebaseNotificationService.sendNotification(userFcmToken, "SkillConnect",
+                        "Your booking for " + booking.getService().getTitle() + " has been confirmed ✅");
+            }
         }
         return bookingRepository.save(booking);
     }
 
     //List all bookings for a requested user
-    public Page<Booking> getBookingsRequestedByUser(Long userId, Pageable pageable){
+    public Page<BookingResponseDTO> getBookingsRequestedByUser(Long userId, Pageable pageable){
         Page<Booking> bookingListForRequestedUser = bookingRepository.findByRequestedBy_Id(userId, pageable);
         if (bookingListForRequestedUser.isEmpty()){
             throw new RuntimeException("No booking found for user with ID: "+userId);
         }
-        return bookingListForRequestedUser;
+        return bookingListForRequestedUser.map(this::toDto);
     }
 
     //List all booking for service provider
-    public Page<Booking> getBookingsForServiceProvider(Long serviceProviderId, Pageable pageable){
+    public Page<BookingResponseDTO> getBookingsForServiceProvider(Long serviceProviderId, Pageable pageable){
         Page<Booking> bookingListForServiceProvider = bookingRepository.findByService_PostedBy_Id(serviceProviderId,pageable);
-        if (bookingListForServiceProvider.isEmpty()){
-            throw new RuntimeException("No bookings found for service provider with ID: " + serviceProviderId);
-        }
-        return bookingListForServiceProvider;
+        return bookingListForServiceProvider.map(this::toDto);
     }
 
     // Method to soft delete a booking (mark as cancelled)
@@ -213,5 +221,21 @@ public class BookingService {
         );
 
         chatRef.collection("messages").add(message).get();
+    }
+    public BookingResponseDTO toDto(Booking booking) {
+        return new BookingResponseDTO(
+                booking.getId(),
+                booking.getRequestedBy().getId(),
+                booking.getService().getId(),
+                booking.getService().getPostedBy().getId(),
+                booking.getService().getTitle(),
+                booking.getRequestedBy().getName(),
+                booking.getService().getPostedBy().getName(),
+                booking.getStatus(),
+                booking.getRequestedAt(),
+                booking.getConfirmedAt(),
+                booking.getCancelledAt(),
+                booking.getUpdatedAt()
+        );
     }
 }

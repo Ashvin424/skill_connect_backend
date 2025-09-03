@@ -4,6 +4,7 @@ import com.skillconnect.backend.dtos.RatingRequestDTO;
 import com.skillconnect.backend.dtos.RatingResponseDTO;
 import com.skillconnect.backend.dtos.RatingUpdateDTO;
 import com.skillconnect.backend.dtos.ServiceResponseDTO;
+import com.skillconnect.backend.models.PagedResponse;
 import com.skillconnect.backend.models.Rating;
 import com.skillconnect.backend.models.Service;
 import com.skillconnect.backend.service.RatingService;
@@ -42,9 +43,9 @@ public class RatingController {
 
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<RatingResponseDTO>> getRatingForUser(@PathVariable Long userId,
-                                                                    @RequestParam(defaultValue = "0") int page,
-                                                                    @RequestParam(defaultValue = "10") int size){
+    public ResponseEntity<PagedResponse<RatingResponseDTO>> getRatingForUser(@PathVariable Long userId,
+                                                                             @RequestParam(defaultValue = "0") int page,
+                                                                             @RequestParam(defaultValue = "10") int size){
         Page<Rating> ratings = ratingService.getRatingsForUser(userId, PageRequest.of(page, size));
 
         if (ratings.isEmpty()){
@@ -52,7 +53,8 @@ public class RatingController {
         }
 
         Page<RatingResponseDTO> dtos = ratings.map(this::mapToDTO);
-        return new ResponseEntity<>(dtos, HttpStatus.OK);
+        PagedResponse<RatingResponseDTO> response = new PagedResponse<>(dtos);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/average/{userId}")
@@ -112,6 +114,8 @@ public class RatingController {
         dto.setComment(rating.getComment());
         dto.setReviewerId(rating.getReviewer().getId());
         dto.setReviewerName(rating.getReviewer().getName());
+        dto.setCreatedAt(rating.getCreatedAt());
+        dto.setReviewerProfileImageUrl(rating.getReviewer().getProfileImageUrl());
         return dto;
     }
 }

@@ -8,6 +8,7 @@ import com.skillconnect.backend.repository.UserRepository;
 import com.skillconnect.backend.security.CustomUserDetailsService;
 import com.skillconnect.backend.service.JwtService;
 import com.skillconnect.backend.service.AuthService;
+import com.skillconnect.backend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,9 @@ public class AuthController {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
@@ -77,8 +81,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        return ResponseEntity.ok(Map.of("message", "Successfully logged out"));
+    public ResponseEntity<Void> logout(@RequestParam String email) {
+        userService.clearFcmToken(email);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/me")
