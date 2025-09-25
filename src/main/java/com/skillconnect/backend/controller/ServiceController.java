@@ -101,14 +101,13 @@ public class ServiceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ServiceResponseDTO> updateServiceById(@PathVariable Long id, @RequestBody UpdateServiceDTO dto, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UpdateServiceDTO> updateServiceById(@PathVariable Long id, @RequestBody UpdateServiceDTO dto, @AuthenticationPrincipal UserDetails userDetails) {
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Optional<Service> updateService = serviceService.updateService(id, dto, user);
         if (updateService.isPresent()){
             Service updatedService = updateService.get();
-            ServiceResponseDTO responseDTO = mapToDTO(updatedService);
-            return new ResponseEntity<>(responseDTO, HttpStatus.OK);
+            return new ResponseEntity<>(dto, HttpStatus.OK);
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

@@ -12,12 +12,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 import com.skillconnect.backend.dtos.CreateServiceDTO;
-import com.skillconnect.backend.dtos.ServiceResponseDTO;
 import com.skillconnect.backend.dtos.UpdateServiceDTO;
 import com.skillconnect.backend.models.User;
+import com.skillconnect.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.skillconnect.backend.repository.ServiceRepository;
@@ -28,6 +29,9 @@ public class ServiceService {
 
     @Autowired
     private ServiceRepository serviceRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // Method to create a new service
     // This method will save the service object to the database
@@ -61,25 +65,28 @@ public class ServiceService {
     // Method to update a service by its ID
     // This method will update the service object in the database if it exists
     // If the service does not exist, it will return an empty Optional
-    public Optional<com.skillconnect.backend.models.Service> updateService(Long id, UpdateServiceDTO dto, User user) {
+    public Optional<com.skillconnect.backend.models.Service> updateService(Long id, UpdateServiceDTO dto, UserDetails userDetails) {
         Optional<com.skillconnect.backend.models.Service> existingServiceOpt = serviceRepository.findById(id);
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("User not found"));
         if (existingServiceOpt.isPresent()) {
-            com.skillconnect.backend.models.Service existingService = existingServiceOpt.get();
-            if (!existingService.getPostedBy().getId().equals(user.getId())) {
-                throw new SecurityException("Unauthorized to update this service.");
-            }
-            if (dto.getTitle() != null) existingService.setTitle(dto.getTitle());
-            if (dto.getDescription() != null) existingService.setDescription(dto.getDescription());
-            if (dto.getCategory() != null) existingService.setCategory(dto.getCategory());
-            if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
-                existingService.setImageUrls(dto.getImageUrls());
-            }
+            com.skillconnect.backend.models.Service existingService = getService(dto, existingServiceOpt, user.getId());
 
             return Optional.of(serviceRepository.save(existingService));
         }
         return Optional.empty();
     }
-    
+
+    private static com.skillconnect.backend.models.Service getService(UpdateServiceDTO dto, Optional<com.skillconnect.backend.models.Service> existingServiceOpt, Long id) {
+        com.skillconnect.backend.models.Service existingService = existingServiceOpt.get();
+        if (!existingService.getPostedBy().getId().equals(id)) {
+            throw new SecurityException("Unauthorized to update this service.");
+        }
+        if (dto.getTitle() != null) existingService.setTitle(dto.getTitle());
+        if (dto.getDescription() != null) existingService.setDescription(dto.getDescription());
+        if (dto.getCategory() != null) existingService.setCategory(dto.getCategory());
+        return existingService;
+    }
+
     // Method to delete a service by its ID
     // This method will delete the service object from the database if it exists
     public boolean deleteServiceById(Long id) {

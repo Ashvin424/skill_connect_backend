@@ -162,13 +162,16 @@ public class UserController {
 
 
     @PutMapping("/change-password")
-    public ResponseEntity<?> changePassword(
+    public ResponseEntity<ChangePasswordDTO> changePassword(
             @RequestBody ChangePasswordDTO dto,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         String email = userDetails.getUsername();
         userService.changePassword(email, dto);
-        return ResponseEntity.ok("Password changed successfully");
+        ChangePasswordDTO changePasswordDTO = new ChangePasswordDTO();
+        changePasswordDTO.setCurrentPassword(dto.getCurrentPassword());
+        changePasswordDTO.setNewPassword(dto.getNewPassword());
+        return ResponseEntity.status(HttpStatus.OK).body(changePasswordDTO);
     }
 
 

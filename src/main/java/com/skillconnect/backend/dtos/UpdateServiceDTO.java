@@ -9,5 +9,4 @@ public class UpdateServiceDTO {
     private String title;
     private String description;
     private String category;
-    private List<String> imageUrls;
 }
