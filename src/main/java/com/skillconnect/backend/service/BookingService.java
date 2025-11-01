@@ -150,13 +150,13 @@ public class BookingService {
 
         if (status == BookingStatus.CANCELLED) {
             booking.setCancelledAt(LocalDateTime.now());
-            if(userFcmToken == null && userFcmToken.isEmpty()) {
+            if(userFcmToken != null && !userFcmToken.isEmpty()) {
                 firebaseNotificationService.sendNotification(userFcmToken, "SkillConnect",
                         "Your booking for " + booking.getService().getTitle() + " has been cancelled 😔.");
             }
         } else if (status == BookingStatus.CONFIRMED) {
             booking.setConfirmedAt(LocalDateTime.now());
-            if(userFcmToken == null && userFcmToken.isEmpty()) {
+            if(userFcmToken != null && !userFcmToken.isEmpty()) {
                 firebaseNotificationService.sendNotification(userFcmToken, "SkillConnect",
                         "Your booking for " + booking.getService().getTitle() + " has been confirmed ✅");
             }
@@ -167,9 +167,7 @@ public class BookingService {
     //List all bookings for a requested user
     public Page<BookingResponseDTO> getBookingsRequestedByUser(Long userId, Pageable pageable){
         Page<Booking> bookingListForRequestedUser = bookingRepository.findByRequestedBy_Id(userId, pageable);
-        if (bookingListForRequestedUser.isEmpty()){
-            throw new RuntimeException("No booking found for user with ID: "+userId);
-        }
+
         return bookingListForRequestedUser.map(this::toDto);
     }
 
