@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.CreateServiceDTO;
 import com.skillconnect.backend.dtos.UpdateServiceDTO;
 import com.skillconnect.backend.models.User;
@@ -67,7 +68,7 @@ public class ServiceService {
     // If the service does not exist, it will return an empty Optional
     public Optional<com.skillconnect.backend.models.Service> updateService(Long id, UpdateServiceDTO dto, UserDetails userDetails) {
         Optional<com.skillconnect.backend.models.Service> existingServiceOpt = serviceRepository.findById(id);
-        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
         if (existingServiceOpt.isPresent()) {
             com.skillconnect.backend.models.Service existingService = getService(dto, existingServiceOpt, user.getId());
 
@@ -110,7 +111,7 @@ public class ServiceService {
 
     public List<String> uploadServiceImages(Long serviceId, List<MultipartFile> imageFiles) throws IOException {
         com.skillconnect.backend.models.Service service = serviceRepository.findById(serviceId)
-                .orElseThrow(() -> new RuntimeException("Service not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service Not Found"));
         Path uploadDir = Paths.get("uploads", "services");
         Files.createDirectories(uploadDir);
 

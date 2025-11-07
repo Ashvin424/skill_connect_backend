@@ -1,5 +1,7 @@
 package com.skillconnect.backend.service;
 
+import com.skillconnect.backend.customException.DuplicateResourceException;
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.RatingRequestDTO;
 import com.skillconnect.backend.dtos.RatingUpdateDTO;
 import com.skillconnect.backend.models.Rating;
@@ -9,6 +11,7 @@ import com.skillconnect.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -34,17 +37,17 @@ public class RatingService {
     // Add a new rating
     public Rating addRating(RatingRequestDTO rating, UserDetails userDetails){
         User reviewer = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Reviewer user not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reviewer user not found"));
 
         User reviewee = userRepository.findById(rating.getRevieweeId())
-                .orElseThrow(() -> new RuntimeException("Reviewee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Reviewee not found"));
 
         if (reviewer.getId().equals(reviewee.getId())){
-            throw new RuntimeException("You cannot rate yourself");
+            throw new IllegalStateException("You cannot rate yourself");
         }
 
         if (ratingRepository.existsByReviewerAndReviewee(reviewer, reviewee)) {
-            throw new RuntimeException("You have already rated this user");
+            throw new DuplicateResourceException("You have already rated this user");
         }
         Rating userRating = new Rating();
 
@@ -58,7 +61,7 @@ public class RatingService {
     //Get rating for a specific user
     public Page<Rating> getRatingsForUser(Long userId, Pageable pageable){
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return ratingRepository.findAllByReviewee_Id(userId, pageable);
     }
 
@@ -70,17 +73,17 @@ public class RatingService {
     // update rating
     public Rating updateRating(Long ratingId, RatingUpdateDTO newRating, UserDetails userDetails){
         User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Rating existingRating = ratingRepository.findById(ratingId)
-                .orElseThrow(()-> new RuntimeException("Rating not found"));
+                .orElseThrow(()-> new ResourceNotFoundException("Rating not found"));
 
         if (!existingRating.getReviewer().getId().equals(user.getId())) {
-            throw new RuntimeException("You can only update your own rating");
+            throw new AccessDeniedException("You can only update your own rating");
         }
 
         if (newRating.getRatingValue() < 1 || newRating.getRatingValue() > 5) {
-            throw new RuntimeException("Rating value must be between 1 and 5");
+            throw new IllegalArgumentException("Rating value must be between 1 and 5");
         }
 
         existingRating.setRatingValue(newRating.getRatingValue());
@@ -92,15 +95,15 @@ public class RatingService {
     }
 
     // delete rating
-    public void deleteRating(Long ratingId, UserDetails userDetails) {
+    public void deleteRating(Long ratingId, UserDetails userDetails) throws AccessDeniedException {
         User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Rating existingRating = ratingRepository.findById(ratingId)
-                .orElseThrow(() -> new RuntimeException("Rating not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Rating not found"));
 
         if (!existingRating.getReviewer().getId().equals(user.getId())) {
-            throw new RuntimeException("You can only delete your own rating");
+            throw new AccessDeniedException("You can only delete your own rating");
         }
 
         ratingRepository.delete(existingRating);

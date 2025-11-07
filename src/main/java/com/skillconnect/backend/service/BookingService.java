@@ -5,6 +5,7 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.BookingRequestDTO;
 import com.skillconnect.backend.dtos.BookingResponseDTO;
 import com.skillconnect.backend.dtos.FirestoreMessage;
@@ -49,10 +50,10 @@ public class BookingService {
      */
     public Booking createBooking(UserDetails userDetails, BookingRequestDTO dto) throws Exception {
         User requestedBy = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Service bookedService = serviceRepository.findById(dto.getServiceId())
-                .orElseThrow(() -> new RuntimeException("Service Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service Not Found"));
 
         User serviceProvider = bookedService.getPostedBy();
 
@@ -110,20 +111,20 @@ public class BookingService {
     // Method to get a booking by its ID
     public Booking getBookingById(Long bookingId){
         return bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
     }
 
     // Method to cancel a booking
     @Transactional
     public Booking cancelBooking(Long bookingId, UserDetails userDetails) {
         User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (!booking.getRequestedBy().getId().equals(user.getId())) {
-            throw new RuntimeException("You can only cancel your own bookings");
+            throw new IllegalStateException("You can only cancel your own bookings");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
@@ -135,14 +136,14 @@ public class BookingService {
     // Method to update the status of a booking
     public Booking updateBookingStatus(Long bookingId, BookingStatus status) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         String userFcmToken = booking.getRequestedBy().getFcmToken();
 
         if (booking.getStatus() == status) {
-            throw new RuntimeException("Booking is already " + status);
+            throw new IllegalStateException("Booking is already " + status);
         }
         if (booking.getStatus() == BookingStatus.CONFIRMED && status != BookingStatus.CANCELLED) {
-            throw new RuntimeException("Cannot change confirmed booking");
+            throw new IllegalStateException("Cannot change confirmed booking");
         }
         booking.setStatus(status);
         booking.setUpdatedAt(LocalDateTime.now());
@@ -180,10 +181,10 @@ public class BookingService {
     // Method to soft delete a booking (mark as cancelled)
     public Booking softDeleteBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new RuntimeException("Booking already cancelled");
+            throw new IllegalStateException("Booking already cancelled");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);

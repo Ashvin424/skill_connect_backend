@@ -1,5 +1,6 @@
 package com.skillconnect.backend.service;
 
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.ChangePasswordDTO;
 import com.skillconnect.backend.dtos.UpdateProfileDTO;
 import com.skillconnect.backend.dtos.UpdateUserDTO;
@@ -47,7 +48,7 @@ public class UserService {
 
     public User updateUser(UpdateUserDTO dto) {
         User existingUser = userRepository.findById(dto.getId())
-                .orElseThrow(() -> new RuntimeException("User not found" ));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found" ));
             existingUser.setName(dto.getName());
             existingUser.setUsername(dto.getUsername());
             existingUser.setBio(dto.getBio());
@@ -64,7 +65,7 @@ public class UserService {
 
     public User updateProfile(String email, UpdateProfileDTO dto){
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         if (dto.getName() != null) user.setName(dto.getName());
         if (dto.getUsername() != null) user.setUsername(dto.getUsername());
         if (dto.getBio() != null) user.setBio(dto.getBio());
@@ -92,7 +93,7 @@ public class UserService {
 
     public String uploadProfileImage(String email, MultipartFile imageFile) throws IOException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
 
         String contentType = imageFile.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
@@ -110,7 +111,7 @@ public class UserService {
 
     public void changePassword(String email, ChangePasswordDTO dto){
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
 
         if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())){
             throw new IllegalArgumentException("Current password is incorrect.");
@@ -128,7 +129,7 @@ public class UserService {
     // It is useful for sending push notifications to the user's device.
     public void updateFcmToken(String email, String fcmToken) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
 
         user.setFcmToken(fcmToken);
         userRepository.save(user);
@@ -136,7 +137,7 @@ public class UserService {
 
     public void clearFcmToken(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
         user.setFcmToken(null); // clear token
         userRepository.save(user);
     }

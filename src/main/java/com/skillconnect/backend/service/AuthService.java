@@ -1,5 +1,7 @@
 package com.skillconnect.backend.service;
 
+import com.skillconnect.backend.customException.DuplicateResourceException;
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.LoginRequestDTO;
 import com.skillconnect.backend.dtos.LoginResponseDTO;
 import com.skillconnect.backend.dtos.UserRegistrationDTO;
@@ -29,10 +31,10 @@ public class AuthService {
 
     public User register(UserRegistrationDTO dto) {
         if (dto.getPassword() == null || dto.getPassword().isBlank()) {
-            throw new RuntimeException("Password cannot be null or blank");
+            throw new IllegalArgumentException("Password cannot be null or blank");
         }
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new RuntimeException("User with this email already exists");
+            throw new DuplicateResourceException("User with this email already exists");
         }
         User user = new User();
         user.setName(dto.getName());
@@ -55,7 +57,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);

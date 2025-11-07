@@ -18,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+
 import java.util.List;
 import java.util.Map;
 
@@ -29,9 +30,9 @@ public class RatingController {
 
     //Get All Ratings
     @GetMapping("/all/ratings")
-    public ResponseEntity<List<RatingResponseDTO>> getAllRatings(){
+    public ResponseEntity<List<RatingResponseDTO>> getAllRatings() {
         List<Rating> allRatings = ratingService.getAllRatings();
-        if (allRatings.isEmpty()){
+        if (allRatings.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         // Convert List<Rating> to List<RatingResponseDTO>
@@ -45,10 +46,10 @@ public class RatingController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<PagedResponse<RatingResponseDTO>> getRatingForUser(@PathVariable Long userId,
                                                                              @RequestParam(defaultValue = "0") int page,
-                                                                             @RequestParam(defaultValue = "10") int size){
+                                                                             @RequestParam(defaultValue = "10") int size) {
         Page<Rating> ratings = ratingService.getRatingsForUser(userId, PageRequest.of(page, size));
 
-        if (ratings.isEmpty()){
+        if (ratings.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
 
@@ -58,7 +59,7 @@ public class RatingController {
     }
 
     @GetMapping("/average/{userId}")
-    public ResponseEntity<?> getAverageRatingForUser(@PathVariable Long userId){
+    public ResponseEntity<?> getAverageRatingForUser(@PathVariable Long userId) {
         double avgRating = ratingService.getAverageRatingForUser(userId);
         if (avgRating == 0.0) {
             return new ResponseEntity<>("No ratings found for this user", HttpStatus.NOT_FOUND);
@@ -69,42 +70,25 @@ public class RatingController {
     @PostMapping
     public ResponseEntity<?> addRating(@Valid @RequestBody RatingRequestDTO rating,
                                        @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            Rating savedRating = ratingService.addRating(rating, userDetails);
-            RatingResponseDTO responseDTO = mapToDTO(savedRating);
-            return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        Rating savedRating = ratingService.addRating(rating, userDetails);
+        RatingResponseDTO responseDTO = mapToDTO(savedRating);
+        return new ResponseEntity<>(responseDTO, HttpStatus.CREATED);
+
     }
 
     @PutMapping("/{ratingId}")
     public ResponseEntity<?> updateRating(@PathVariable Long ratingId,
                                           @RequestBody RatingUpdateDTO newRating,
                                           @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            Rating updatedRating = ratingService.updateRating(ratingId, newRating, userDetails);
-            RatingResponseDTO responseDTO = mapToDTO(updatedRating);
-            return new ResponseEntity<>(responseDTO, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        Rating updatedRating = ratingService.updateRating(ratingId, newRating, userDetails);
+        RatingResponseDTO responseDTO = mapToDTO(updatedRating);
+        return new ResponseEntity<>(responseDTO, HttpStatus.OK);
     }
 
     @DeleteMapping("/{ratingId}")
     public ResponseEntity<?> deleteRating(@PathVariable Long ratingId, @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            ratingService.deleteRating(ratingId, userDetails);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (RuntimeException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        ratingService.deleteRating(ratingId, userDetails);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     private RatingResponseDTO mapToDTO(Rating rating) {
