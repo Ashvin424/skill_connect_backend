@@ -13,6 +13,8 @@ public class ServiceResponseDTO {
     private List<String> imageUrls;
     private Long userId;
     private String username;
+    private String providerMode;
+    private Boolean isActive;
 
     private Double userRating;
     private String userProfileImageUrl;

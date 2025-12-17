@@ -126,6 +126,18 @@ public class ServiceController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/deactivate")
+    public ResponseEntity<?> deactivateService(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        serviceService.deactivateService(id, user.getId());
+        return ResponseEntity.ok("Service deactivated successfully");
+    }
+
+
     @PostMapping("/{id}/upload-images")
     public ResponseEntity<?> uploadServiceImages(
             @PathVariable("id") Long serviceId,
@@ -167,6 +179,8 @@ public class ServiceController {
         dto.setDescription(service.getDescription());
         dto.setCategory(service.getCategory());
         dto.setImageUrls(service.getImageUrls());
+        dto.setProviderMode(service.getPostedBy().getServiceMode());
+        dto.setIsActive(service.isActive());
 
         if (service.getPostedBy() != null) {
             dto.setUserId(service.getPostedBy().getId());

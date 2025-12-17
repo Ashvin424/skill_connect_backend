@@ -3,5 +3,6 @@ package com.skillconnect.backend.models;
 public enum BookingStatus {
     PENDING,
     CONFIRMED,
-    CANCELLED
+    CANCELLED,
+    COMPLETED
 }

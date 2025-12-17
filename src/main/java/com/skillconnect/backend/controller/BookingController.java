@@ -1,11 +1,14 @@
 package com.skillconnect.backend.controller;
 
+import com.skillconnect.backend.customException.ResourceNotFoundException;
 import com.skillconnect.backend.dtos.BookingRequestDTO;
 import com.skillconnect.backend.dtos.BookingResponseDTO;
 import com.skillconnect.backend.dtos.BookingStatusUpdateRequestDTO;
 import com.skillconnect.backend.models.Booking;
 import com.skillconnect.backend.models.Service;
 import com.skillconnect.backend.models.User;
+import com.skillconnect.backend.repository.BookingRepository;
+import com.skillconnect.backend.repository.UserRepository;
 import com.skillconnect.backend.service.BookingService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -27,6 +30,8 @@ public class BookingController {
 
     @Autowired
     private BookingService bookingService;
+    @Autowired
+    private BookingRepository bookingRepository;
 
     //Get Booking for Requested by User
     @GetMapping("/{id}")
@@ -99,6 +104,16 @@ public class BookingController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
+
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<BookingResponseDTO> completeBooking(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Booking booking = bookingService.completeBooking(id, userDetails);
+        return ResponseEntity.ok(bookingService.toDto(booking));
+    }
+
 
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Booking> cancelBooking(@PathVariable Long id,

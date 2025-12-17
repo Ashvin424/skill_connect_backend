@@ -34,4 +34,8 @@ public class Service {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")  // Foreign key column
     private User postedBy;
+
+    @Column(nullable = false)
+    private boolean isActive = true;
+
 }

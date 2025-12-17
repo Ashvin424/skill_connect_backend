@@ -33,6 +33,9 @@ public class Booking {
     private LocalDateTime confirmedAt; // Timestamp when the booking was confirmed, if applicable
 
     @Column(nullable = true)
+    private LocalDateTime completedAt; // Timestamp when the booking was completed.
+
+    @Column(nullable = true)
     private LocalDateTime cancelledAt; // Timestamp when the booking was cancelled, if applicable
 
     @UpdateTimestamp

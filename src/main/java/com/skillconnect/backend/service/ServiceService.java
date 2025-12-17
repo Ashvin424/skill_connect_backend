@@ -2,10 +2,7 @@ package com.skillconnect.backend.service;
 
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,10 +16,12 @@ import com.skillconnect.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import com.skillconnect.backend.repository.ServiceRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -50,12 +49,20 @@ public class ServiceService {
     // Method to get all services
     // This method will retrieve all service objects from the database
     public List<com.skillconnect.backend.models.Service> getAllServices(int page, int size, String category) {
+
         Pageable pageable = PageRequest.of(page, size);
+
         if (category != null && !category.isBlank()) {
-            return serviceRepository.findByCategoryIgnoreCase(category, pageable).getContent();
+            return serviceRepository
+                    .findByCategoryIgnoreCaseAndIsActiveTrue(category, pageable)
+                    .getContent();
         }
-        return serviceRepository.findAll();
+
+        return serviceRepository
+                .findByIsActiveTrue(pageable)
+                .getContent();
     }
+
 
     // Method to get a service by its ID
     // This method will retrieve a service object by its ID from the database
@@ -97,6 +104,28 @@ public class ServiceService {
         }
         return false;       
     }
+    @Transactional
+    public boolean deactivateService(Long serviceId, Long providerId) {
+
+        com.skillconnect.backend.models.Service service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found"));
+
+        // 🔐 Ownership check
+        if (!service.getPostedBy().getId().equals(providerId)) {
+            throw new AccessDeniedException("You are not allowed to deactivate this service");
+        }
+
+        // Already inactive → no-op
+        if (!service.isActive()) {
+            return false;
+        }
+
+        service.setActive(false);
+        serviceRepository.save(service);
+
+        return true;
+    }
+
 
     // Method to upload service images
     // This method will save the uploaded images to the server and update the service's image URLs

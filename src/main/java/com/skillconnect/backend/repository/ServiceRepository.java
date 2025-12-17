@@ -10,7 +10,6 @@ import java.util.List;
 public interface ServiceRepository extends JpaRepository<Service, Long> {
     // This interface will automatically inherit methods for CRUD operations
     // and can be extended with custom query methods if needed.
-    Page<Service> findByCategoryIgnoreCase(String category, Pageable pageable);
 
     int countByPostedBy_Id(Long id);
 
@@ -21,4 +20,9 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     List<Service> findByCategoryContainingIgnoreCase(String category);
 
     List<Service> findByPostedByUsernameContainingIgnoreCase(String username);
+
+    Page<Service> findByIsActiveTrue(Pageable pageable);
+
+    Page<Service> findByCategoryIgnoreCaseAndIsActiveTrue(String category, Pageable pageable);
+
 }

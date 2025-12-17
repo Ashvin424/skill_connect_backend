@@ -1,5 +1,6 @@
 package com.skillconnect.backend.service;
 
+import com.google.api.gax.rpc.UnauthenticatedException;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -19,6 +20,7 @@ import com.skillconnect.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,6 +62,9 @@ public class BookingService {
         if (bookingRepository.existsByRequestedByAndService(requestedBy, bookedService)) {
             throw new IllegalStateException("You have already booked this service");
         }
+        if (!bookedService.isActive()) {
+            throw new IllegalStateException("Service is no longer available");
+        }
 
         if (serviceProvider.getId().equals(requestedBy.getId())) {
             throw new IllegalStateException("You cannot book your own service");
@@ -97,7 +102,7 @@ public class BookingService {
         try {
             String userId1 = String.valueOf(requestedBy.getId());
             String userId2 = String.valueOf(serviceProvider.getId());
-            createChatAndSendFirstMessage(userId1, userId2);
+            createChatAndSendFirstMessage(userId1, userId2, booking.getService().getTitle());
         } catch (Exception e) {
             e.printStackTrace(); // Or log.error(...)
         }
@@ -142,7 +147,7 @@ public class BookingService {
         if (booking.getStatus() == status) {
             throw new IllegalStateException("Booking is already " + status);
         }
-        if (booking.getStatus() == BookingStatus.CONFIRMED && status != BookingStatus.CANCELLED) {
+        if (booking.getStatus() == BookingStatus.CONFIRMED && status != BookingStatus.COMPLETED) {
             throw new IllegalStateException("Cannot change confirmed booking");
         }
         booking.setStatus(status);
@@ -193,7 +198,7 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    public void createChatAndSendFirstMessage(String senderId, String receiverId) throws Exception {
+    public void createChatAndSendFirstMessage(String senderId, String receiverId, String title) throws Exception {
         Firestore db = FirestoreClient.getFirestore();
 
         // Always sort to maintain same chatId for same pair
@@ -214,12 +219,37 @@ public class BookingService {
         // Send the first message
         FirestoreMessage message = new FirestoreMessage(
                 senderId,
-                "Hi, I've booked your service. Let's chat here.",
+                "Hi, I've booked your service "+title+". Let's chat here.",
                 Timestamp.now()
         );
 
         chatRef.collection("messages").add(message).get();
     }
+
+    @Transactional
+    public Booking completeBooking(Long bookingId, UserDetails userDetails) {
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        User provider = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!booking.getService().getPostedBy().getId().equals(provider.getId())) {
+            throw new AccessDeniedException("Only service provider can complete booking");
+        }
+
+        // ✅ State validation
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new IllegalStateException("Only confirmed bookings can be completed");
+        }
+
+        booking.setStatus(BookingStatus.COMPLETED);
+        booking.setCompletedAt(LocalDateTime.now());
+
+        return bookingRepository.save(booking);
+    }
+
     public BookingResponseDTO toDto(Booking booking) {
         return new BookingResponseDTO(
                 booking.getId(),

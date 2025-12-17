@@ -12,13 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class UserService {
@@ -33,12 +27,12 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     //get user by id for profile page
-    public Optional<User> getUserById(Long id){
+    public Optional<User> getUserById(Long id) {
         return userRepository.findById(id);
     }
 
     //get user by username
-    public Optional<User> getUserByUsername(String username){
+    public Optional<User> getUserByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
@@ -48,22 +42,22 @@ public class UserService {
 
     public User updateUser(UpdateUserDTO dto) {
         User existingUser = userRepository.findById(dto.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found" ));
-            existingUser.setName(dto.getName());
-            existingUser.setUsername(dto.getUsername());
-            existingUser.setBio(dto.getBio());
-            existingUser.setSkills(dto.getSkills());
-            existingUser.setLocation(dto.getLocation());
-            existingUser.setProfileImageUrl(dto.getProfileImageUrl());
-            existingUser.setServiceMode(dto.getServiceMode());
-            // Note: Password is not updated here, as it should be handled separately
-            userRepository.save(existingUser);
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        existingUser.setName(dto.getName());
+        existingUser.setUsername(dto.getUsername());
+        existingUser.setBio(dto.getBio());
+        existingUser.setSkills(dto.getSkills());
+        existingUser.setLocation(dto.getLocation());
+        existingUser.setProfileImageUrl(dto.getProfileImageUrl());
+        existingUser.setServiceMode(dto.getServiceMode());
+        // Note: Password is not updated here, as it should be handled separately
+        userRepository.save(existingUser);
 
-            return existingUser;
+        return existingUser;
 
     }
 
-    public User updateProfile(String email, UpdateProfileDTO dto){
+    public User updateProfile(String email, UpdateProfileDTO dto) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         if (dto.getName() != null) user.setName(dto.getName());
@@ -81,7 +75,7 @@ public class UserService {
         # UserService Enhancements
             - `save(User user)` method allows direct saving of the user entity.
             - Required when:
-                    - Updating profile image
+                    - Updating profile imagex
                     - Handling password reset
                     - Any direct field changes outside of DTOs
 
@@ -109,14 +103,14 @@ public class UserService {
     }
 
 
-    public void changePassword(String email, ChangePasswordDTO dto){
+    public void changePassword(String email, ChangePasswordDTO dto) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
 
-        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())){
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect.");
         }
-        if (dto.getCurrentPassword().equals(dto.getNewPassword())){
+        if (dto.getCurrentPassword().equals(dto.getNewPassword())) {
             throw new IllegalArgumentException("New password cannot be the same as current password.");
         }
 
