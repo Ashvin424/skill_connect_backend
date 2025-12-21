@@ -32,7 +32,7 @@ The backend uses **Spring Boot**, **Spring Security (JWT)**, **Spring Data JPA**
 ## Installation
 
 ### 1️⃣ Clone the repository
-- git clone https://github.com/your-repo/skillconnect-backend.git
+- git clone https://github.com/skill_connect_backend.git
 
 - cd skillconnect-backend
 
